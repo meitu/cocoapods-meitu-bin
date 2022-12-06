@@ -1,0 +1,5 @@
+require 'cocoapods-meitu-bin/helpers/sources_helper'
+require 'cocoapods-meitu-bin/helpers/spec_creator'
+require 'cocoapods-meitu-bin/helpers/spec_files_helper'
+require 'cocoapods-meitu-bin/helpers/spec_source_creator'
+require 'cocoapods-meitu-bin/helpers/build_utils'

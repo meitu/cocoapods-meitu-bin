@@ -1,10 +1,10 @@
-require 'cocoapods-mtxx-bin/command'
-require 'cocoapods-mtxx-bin/source_provider_hook'
-# require 'cocoapods-mtxx-bin/gem_version'
+require 'cocoapods-meitu-bin/command'
+require 'cocoapods-meitu-bin/source_provider_hook'
+# require 'cocoapods-meitu-bin/gem_version'
 #
 # msg = <<-MSG
 # ————————————————————————————————
-# |#{'cocoapods-mtxx-bin'.center(30)}|
+# |#{'cocoapods-meitu-bin'.center(30)}|
 # |#{CBin::VERSION.center(30)}|
 # ————————————————————————————————
 # MSG

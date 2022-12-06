@@ -1,12 +1,12 @@
-# cocoapods-mtxx-bin
+# cocoapods-meitu-bin
 
 ## 简介
 
-`cocoapods-mtxx-bin`是`CocoaPods`的二进制插件，提供了二进制相关的功能，如基于壳工程的二进制制作、二进制 / 源码切换等
+`cocoapods-meitu-bin`是`CocoaPods`的二进制插件，提供了二进制相关的功能，如基于壳工程的二进制制作、二进制 / 源码切换等
 
 ## 安装
 
-`cocoapods-mtxx-bin`有2种安装方式：
+`cocoapods-meitu-bin`有2种安装方式：
 
 * 安装到本机目录
 * 使用`Gemfile`
@@ -14,7 +14,7 @@
 ### 安装到本机目录
 
 ```shell
-$ sudo gem install cocoapods-mtxx-bin
+$ sudo gem install cocoapods-meitu-bin
 ```
     
 ### 使用Gemfile
@@ -22,7 +22,7 @@ $ sudo gem install cocoapods-mtxx-bin
 在`Gemfile`中添加如下代码，然后执行`bundle install`
 
 ```ruby
-gem 'cocoapods-mtxx-bin'
+gem 'cocoapods-meitu-bin'
 ```
 
 ## 使用
@@ -48,7 +48,7 @@ gem 'cocoapods-mtxx-bin'
 
 ```ruby
 # 加载插件
-plugin 'cocoapods-mtxx-bin'
+plugin 'cocoapods-meitu-bin'
 # 开启二进制
 use_binaries!
 # 设置源码白名单

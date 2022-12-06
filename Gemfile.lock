@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    cocoapods-mtxx-bin (1.1.0)
+    cocoapods-meitu-bin (1.0.0)
       cocoapods (>= 1.10.2, <= 1.11.2)
       cocoapods-generate (~> 2.0.1)
       parallel (~> 1.22.0)
@@ -117,7 +117,7 @@ DEPENDENCIES
   bacon
   bundler
   cocoapods (= 1.10.2)
-  cocoapods-mtxx-bin!
+  cocoapods-meitu-bin!
   debase
   mocha
   mocha-on-bacon

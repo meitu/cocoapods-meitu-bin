@@ -1,6 +1,6 @@
 source 'https://rubygems.org'
 
-# Specify your gem's dependencies in cocoapods-mtxx-bin.gemspec
+# Specify your gem's dependencies in cocoapods-meitu-bin.gemspec
 gemspec
 
 group :development do

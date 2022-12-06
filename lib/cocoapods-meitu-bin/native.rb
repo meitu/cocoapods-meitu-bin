@@ -1,0 +1,26 @@
+require 'cocoapods'
+require 'cocoapods-meitu-bin/gem_version'
+
+if Pod.match_version?('~> 1.4')
+  require 'cocoapods-meitu-bin/native/podfile'
+  require 'cocoapods-meitu-bin/native/installation_options'
+  require 'cocoapods-meitu-bin/native/specification'
+  require 'cocoapods-meitu-bin/native/path_source'
+  require 'cocoapods-meitu-bin/native/analyzer'
+  require 'cocoapods-meitu-bin/native/installer'
+  require 'cocoapods-meitu-bin/native/podfile_generator'
+  require 'cocoapods-meitu-bin/native/pod_source_installer'
+  require 'cocoapods-meitu-bin/native/linter'
+  require 'cocoapods-meitu-bin/native/resolver'
+  require 'cocoapods-meitu-bin/native/source'
+  require 'cocoapods-meitu-bin/native/validator'
+  require 'cocoapods-meitu-bin/native/acknowledgements'
+  require 'cocoapods-meitu-bin/native/sandbox_analyzer'
+  require 'cocoapods-meitu-bin/native/podspec_finder'
+  require 'cocoapods-meitu-bin/native/file_accessor'
+  require 'cocoapods-meitu-bin/native/pod_target_installer'
+  require 'cocoapods-meitu-bin/native/target_validator'
+  require 'cocoapods-meitu-bin/native/gen'
+  require 'cocoapods-meitu-bin/native/lockfile'
+
+end
