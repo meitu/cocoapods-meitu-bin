@@ -16,6 +16,10 @@ module Pod
         set_internal_hash_value(USE_BINARIES, flag)
       end
 
+      def include_dependencies!(flag = false)
+        set_internal_hash_value(INCLUDE_DEPENDENCIES, flag)
+      end
+
       def use_binaries_with_spec_selector!(&block)
         raise Informative, '必须提供选择需要二进制组件的 block !' unless block_given?
 
@@ -63,6 +67,10 @@ module Pod
 
     def use_binaries?
       get_internal_hash_value(USE_BINARIES, false) || ENV[USE_BINARIES] == 'true'
+    end
+
+    def include_dependencies?
+      get_internal_hash_value(INCLUDE_DEPENDENCIES, false) || ENV[INCLUDE_DEPENDENCIES] == 'true'
     end
 
     def use_source_pods

@@ -11,13 +11,16 @@ module CBin
       end
 
       # 二进制版本号（x.y.z.bin[md5前6位]）
-      def version(pod_name, original_version, specifications, configuration = 'Debug')
+      def version(pod_name, original_version, specifications, configuration = 'Debug', include_dependencies = false)
         # 有缓存从缓存中取，没有则新建
         if @specs_str_md5_hash[pod_name].nil?
           specs = specifications.map(&:name).select { |spec|
             spec.include?(pod_name) && !spec.include?('/Binary')
           }.sort!
-          specs << dependencies_str(pod_name, specifications)
+          puts "#{pod_name}:#{include_dependencies}"
+          if include_dependencies
+            specs << dependencies_str(pod_name, specifications)
+          end
           specs << xcode_version
           specs << (configuration.nil? ? 'Debug' : configuration)
           specs_str = specs.join('')

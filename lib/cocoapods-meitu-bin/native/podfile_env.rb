@@ -9,6 +9,7 @@ module Pod
     USE_PLUGINS = 'use_plugins'
     CONFIGURATION_ENV = 'configuration_env'
     CONFIGURATION = 'configuration'
+    INCLUDE_DEPENDENCIES = 'include_dependencies'
 
     module ENVExecutor
       def execute_with_bin_plugin(&block)

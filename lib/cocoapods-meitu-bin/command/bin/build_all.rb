@@ -219,7 +219,7 @@ module Pod
             created_pods = []
             pod_targets.map do |pod_target|
               begin
-                version = @version_helper.version(pod_target.pod_name, pod_target.root_spec.version.to_s, @analyze_result.specifications, @configuration)
+                version = @version_helper.version(pod_target.pod_name, pod_target.root_spec.version.to_s, @analyze_result.specifications, @configuration, podfile.include_dependencies?)
                 # 黑名单（不分全量和非全量）
                 next if skip_build?(pod_target)
                 # 白名单（有白名单，只看白名单，不分全量和非全量）

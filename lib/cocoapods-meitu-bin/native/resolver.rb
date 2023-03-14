@@ -179,7 +179,7 @@ module Pod
             if use_binary
               source = sources_manager.binary_source
               configuration = ENV['configuration'] || podfile.configuration
-              spec_version = version_helper.version(rspec.root.name, rspec.spec.version, specifications, configuration)
+              spec_version = version_helper.version(rspec.root.name, rspec.spec.version, specifications, configuration, podfile.include_dependencies?)
             else
               # 获取podfile中的source
               podfile_sources = podfile.sources.uniq.map { |source| sources_manager.source_with_name_or_url(source) }
