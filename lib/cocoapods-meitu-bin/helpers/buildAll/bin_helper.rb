@@ -17,7 +17,7 @@ module CBin
           specs = specifications.map(&:name).select { |spec|
             spec.include?(pod_name) && !spec.include?('/Binary')
           }.sort!
-          puts "#{pod_name}:#{include_dependencies}"
+          # puts "#{pod_name}:#{include_dependencies}"
           if include_dependencies
             specs << dependencies_str(pod_name, specifications)
           end
