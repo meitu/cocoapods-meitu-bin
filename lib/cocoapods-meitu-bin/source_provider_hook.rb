@@ -55,13 +55,16 @@ def get_podfile_lock
         else
           Pod::UI.puts "获取podfile.lcok文件失败".red
           `rm -rf podfile.lock.zip`
+          `ls`
         end
       end
     end
   rescue => error
-    puts "获取podfile.lcok文件失败"
+    puts error
+    puts "podfile.lcok相关发生异常"
     `rm -rf podfile.lock.zip`
-    `rm -rf podfile.lcok`
+    `rm -rf podfile.lock`
+    `ls`
   end
 end
 
