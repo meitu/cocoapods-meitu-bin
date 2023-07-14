@@ -33,21 +33,19 @@ def get_podfile_lock
         puts "获取服务端存储的podfile.lcok文件".green
         #下载并解压的podfile.zip文件
         if system("curl -O #{curl}") && system("unzip -o podfile.lock.zip")
-          output = `pwd`
-          puts output
           Pod::UI.puts "下载并解压podfile.lcok文件成功".green
           `rm -rf podfile.lock.zip`
-          # Pod::Config.instance.lockfile = Pod::Config.instance.lockfile
+          # 设置获取到的podfile.lock对象
+          PodUpdateConfig.set_lockfile( Pod::Config.instance.installation_root + 'Podfile.lock')
           #获取analyzer
           analyzer = Pod::Installer::Analyzer.new(
             Pod::Config.instance.sandbox,
             Pod::Config.instance.podfile,
-            Pod::Config.instance.lockfile
+            PodUpdateConfig.lockfile
           )
           analyzer.analyze(true)
 
           #获取analyzer中所有git 且branch 指向的pod
-          # git_branch_pods_names = []
           Pod::Config.instance.podfile.dependencies.map do |dependency|
             if dependency.external_source && dependency.external_source[:git] && (dependency.external_source[:branch] || (dependency.external_source.size == 1))
               #brash 指定的组件添加到全局PodUpdateConfig配置中，执行pod install 需要更新的分支最新提交

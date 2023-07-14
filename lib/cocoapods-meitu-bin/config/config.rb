@@ -2,7 +2,7 @@ require 'yaml'
 require 'cocoapods-meitu-bin/native/podfile'
 require 'cocoapods-meitu-bin/native/podfile_env'
 require 'cocoapods/generate'
-
+require 'cocoapods'
 module CBin
   class Config
     def config_file
@@ -150,8 +150,15 @@ end
 
 class PodUpdateConfig
   @@pods = []
+  @@lockfile = nil
   def self.add_value(value)
     @@pods << value
+  end
+  def self.set_lockfile(path)
+    @@lockfile =  Pod::Lockfile.from_file(path) if path
+  end
+  def self.lockfile()
+    @@lockfile
   end
   # 一个类方法，用于显示数组中的值
   def self.pods

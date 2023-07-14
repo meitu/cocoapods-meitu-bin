@@ -40,10 +40,9 @@ module Pod
       if list && !list.empty?
         self.update = { :pods => list  }
       end
-      #获取self 全部属性列表
-      # puts self.instance_variables
-
-
+      if PodUpdateConfig.lockfile
+        self.instance_variable_set("@lockfile",PodUpdateConfig.lockfile)
+      end
       start_time = Time.now
       analyzer = old_resolve_dependencies
       cost_time_hash['resolve_dependencies'] = Time.now - start_time
