@@ -5,8 +5,7 @@ require 'cocoapods/user_interface'
 require 'yaml'
 require 'cocoapods'
 
-
-# 获取服务端podfile.lock文件
+#获取服务端podfile.lock文件
 def get_podfile_lock
   begin
     # 默认是获取要获取服务端podfile.lock文件
@@ -53,9 +52,8 @@ def get_podfile_lock
             end
           end
         else
-          Pod::UI.puts "获取podfile.lcok文件失败".red
+          puts "获取podfile.lcok文件失败"
           `rm -rf podfile.lock.zip`
-          `ls`
         end
       end
     end
@@ -64,7 +62,6 @@ def get_podfile_lock
     puts "podfile.lcok相关发生异常"
     `rm -rf podfile.lock.zip`
     `rm -rf podfile.lock`
-    `ls`
   end
 end
 
