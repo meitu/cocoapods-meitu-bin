@@ -147,3 +147,14 @@ module CBin
     @config ||= Config.new
   end
 end
+
+class PodUpdateConfig
+  @@pods = []
+  def self.add_value(value)
+    @@pods << value
+  end
+  # 一个类方法，用于显示数组中的值
+  def self.pods
+    @@pods
+  end
+end

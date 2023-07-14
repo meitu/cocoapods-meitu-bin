@@ -4,6 +4,7 @@ require 'cocoapods'
 require 'xcodeproj'
 require 'cocoapods-meitu-bin/native/pod_source_installer'
 require 'cocoapods-meitu-bin/helpers/pod_size_helper'
+require 'cocoapods-meitu-bin/config/config'
 
 module Pod
   class Installer
@@ -34,6 +35,15 @@ module Pod
     # 依赖分析
     alias old_resolve_dependencies resolve_dependencies
     def resolve_dependencies
+      list =  PodUpdateConfig.pods
+      # 判断  PodUpdateConfig.pods 是否为空，且数组大于0
+      if list && !list.empty?
+        self.update = { :pods => list  }
+      end
+      #获取self 全部属性列表
+      # puts self.instance_variables
+
+
       start_time = Time.now
       analyzer = old_resolve_dependencies
       cost_time_hash['resolve_dependencies'] = Time.now - start_time

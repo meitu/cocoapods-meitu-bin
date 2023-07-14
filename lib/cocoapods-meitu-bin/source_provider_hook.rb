@@ -3,12 +3,109 @@ require 'cocoapods-meitu-bin/command/bin/repo/update'
 require 'cocoapods-meitu-bin/config/config'
 require 'cocoapods/user_interface'
 require 'yaml'
+require 'cocoapods'
 
-Pod::HooksManager.register('cocoapods-meitu-bin', :pre_install) do |_context, _|
+
+# 获取服务端podfile.lock文件
+def get_podfile_lock
+  begin
+    # 默认是获取要获取服务端podfile.lock文件
+    is_load_podfile_lock = true
+    # MEITU_LOAD_CACHE_PODFILE_LOCK 为false时不获取服务端podfile.lock文件
+    if ENV['MEITU_LOAD_CACHE_PODFILE_LOCK'] && ENV['MEITU_LOAD_CACHE_PODFILE_LOCK'] == 'false'
+      is_load_podfile_lock = false
+    end
+    # 判断是否有update参数 时不获取服务端podfile.lock文件
+    ARGV.each do |arg|
+      if arg == 'update'
+        is_load_podfile_lock = false
+      end
+    end
+    # podfile.lock文件下载和使用逻辑
+    if is_load_podfile_lock
+      #获取 PODFILE CHECKSUM 用来判断服务端是否存在该podfile.lock
+      checksum = Pod::Config.instance.podfile.checksum
+      puts checksum
+      # zip下载地址
+      curl = "https://xiuxiu-dl-meitu-com.obs.cn-north-4.myhuaweicloud.com/ios/binary/MTXX/#{checksum}/podfile.lock.zip"
+      # 判断zip文件是否存在 存在下载并解压
+      if system("curl -o /dev/null -s -w %{http_code} #{curl} | grep 200")
+        puts "获取服务端存储的podfile.lcok文件".green
+        #下载并解压的podfile.zip文件
+        if system("curl -O #{curl}") && system("unzip -o podfile.lock.zip")
+          output = `pwd`
+          puts output
+          Pod::UI.puts "下载并解压podfile.lcok文件成功".green
+          `rm -rf podfile.lock.zip`
+          # Pod::Config.instance.lockfile = Pod::Config.instance.lockfile
+          #获取analyzer
+          analyzer = Pod::Installer::Analyzer.new(
+            Pod::Config.instance.sandbox,
+            Pod::Config.instance.podfile,
+            Pod::Config.instance.lockfile
+          )
+          analyzer.analyze(true)
+
+          #获取analyzer中所有git 且branch 指向的pod
+          # git_branch_pods_names = []
+          Pod::Config.instance.podfile.dependencies.map do |dependency|
+            if dependency.external_source && dependency.external_source[:git] && (dependency.external_source[:branch] || (dependency.external_source.size == 1))
+              #brash 指定的组件添加到全局PodUpdateConfig配置中，执行pod install 需要更新的分支最新提交
+              PodUpdateConfig.add_value(dependency.name)
+            end
+          end
+        else
+          Pod::UI.puts "获取podfile.lcok文件失败".red
+          `rm -rf podfile.lock.zip`
+        end
+      end
+    end
+  rescue => error
+    puts "获取podfile.lcok文件失败"
+    `rm -rf podfile.lock.zip`
+    `rm -rf podfile.lcok`
+  end
+end
+
+# 上传podfile.lock文件到服务端
+def upload_podfile_lock
+  begin
+    checksum = Pod::Config.instance.podfile.checksum
+    curl = "https://xiuxiu-dl-meitu-com.obs.cn-north-4.myhuaweicloud.com/ios/binary/MTXX/#{checksum}/podfile.lock.zip"
+    # 服务端不存在该podfiel.lock文件才上传，避免频繁上报同一个文件
+    if !system("curl -o /dev/null -s -w %{http_code} #{curl} | grep 200")
+      Pod::UI.puts "上报podfile.lcok文件到服务端".green
+      puts checksum
+      if system("zip  podfile.lock.zip Podfile.lock") && system("curl -F \"name=MTXX\" -F \"version=#{checksum}\" -F \"file=@#{Pathname.pwd}/podfile.lock.zip\" http://nezha.community.cloud.meitu.com/file/upload.json")
+        Pod::UI.puts "上报podfile.lcok文件到服务端成功".green
+        `rm -rf podfile.lock.zip`
+      else
+        Pod::UI.puts "上报podfile.lcok文件到服务端失败".red
+        `rm -rf podfile.lock.zip`
+      end
+    end
+
+  rescue => error
+     puts "上传podfile.lcok文件失败".red
+    `rm -rf podfile.zip`
+  end
+end
+
+Pod::HooksManager.register('cocoapods-meitu-bin', :pre_install) do |_context|
   require 'cocoapods-meitu-bin/native'
   require 'cocoapods-meitu-bin/helpers/buildAll/bin_helper'
 
   Pod::UI.puts "当前configuration: `#{ENV['configuration'] || Pod::Config.instance.podfile.configuration}`".green
+  # checksum = Pod::Config.instance.podfile.checksum
+  # puts Pod::Config.instance
+  # installer =  Installer.new(config.sandbox, config.podfile, config.lockfile)
+  # puts checksum
+  get_podfile_lock
+
+
+
+
+
 
   # pod bin repo update 更新二进制私有源
   Pod::Command::Bin::Repo::Update.new(CLAide::ARGV.new($ARGV)).run
@@ -23,6 +120,7 @@ Pod::HooksManager.register('cocoapods-meitu-bin', :pre_install) do |_context, _|
                   $ARGV[1] != 'archive'
       _context.podfile.set_use_source_pods d.name
     end
+
   end
 
   # 同步 BinPodfile 文件
@@ -41,6 +139,13 @@ Pod::HooksManager.register('cocoapods-meitu-bin', :pre_install) do |_context, _|
       raise Pod::DSLError.new(message, path, e, contents)
     end
   end
+end
+
+# 注册 pod install 钩子
+Pod::HooksManager.register('cocoapods-meitu-bin', :post_install) do |context|
+  # p "hello world!  post_install"
+  upload_podfile_lock
+
 end
 
 Pod::HooksManager.register('cocoapods-meitu-bin', :source_provider) do |context, _|

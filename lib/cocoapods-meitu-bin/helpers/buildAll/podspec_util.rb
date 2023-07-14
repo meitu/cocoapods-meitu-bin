@@ -26,7 +26,8 @@ module CBin
         spec['private_header_files'] = "#{root_dir}/PrivateHeaders/*.h"
         # 处理vendored_libraries和vendored_frameworks
         spec['vendored_libraries'] = "#{root_dir}/libs/*.a"
-        spec['vendored_frameworks'] = %W[#{root_dir} #{root_dir}/fwks/*.framework]
+        #兼容.xcframework
+        spec['vendored_frameworks'] = %W[#{root_dir} #{root_dir}/fwks/*.framework #{root_dir}/fwks/*.xcframework]
         # 处理资源
         resources = %W[#{root_dir}/*.{#{special_resource_exts.join(',')}} #{root_dir}/resources/*]
         spec['resources'] = resources
