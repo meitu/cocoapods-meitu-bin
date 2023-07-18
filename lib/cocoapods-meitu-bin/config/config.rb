@@ -155,7 +155,7 @@ class PodUpdateConfig
     @@pods << value
   end
   def self.set_lockfile(path)
-    @@lockfile =  Pod::Lockfile.from_file(path) if path
+    @@lockfile = Pod::Lockfile.from_file(path) if path
   end
   def self.lockfile()
     @@lockfile
@@ -163,5 +163,9 @@ class PodUpdateConfig
   # 一个类方法，用于显示数组中的值
   def self.pods
     @@pods
+  end
+  def self.clear
+    @@pods = []
+    @@lockfile = nil
   end
 end

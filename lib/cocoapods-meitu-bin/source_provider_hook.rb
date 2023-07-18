@@ -16,6 +16,7 @@ def get_podfile_lock
     end
     # 判断是否有update参数 时不获取服务端podfile.lock文件
     ARGV.each do |arg|
+      puts "pod 执行 #{arg}"
       if arg == 'update'
         is_load_podfile_lock = false
       end
@@ -28,15 +29,16 @@ def get_podfile_lock
       # zip下载地址
       curl = "https://xiuxiu-dl-meitu-com.obs.cn-north-4.myhuaweicloud.com/ios/binary/MTXX/#{checksum}/podfile.lock.zip"
       # 判断zip文件是否存在 存在下载并解压
-      if system("curl -o /dev/null -s -w %{http_code} #{curl} | grep 200")
+      if system("curl -o /dev/null -s -w %{http_code} #{curl} | grep 200  > /dev/null 2>&1")
         puts "获取服务端存储的podfile.lcok文件".green
         #下载并解压的podfile.zip文件
-        if system("curl -O #{curl}") && system("unzip -o podfile.lock.zip")
+        if system("curl -O #{curl} > /dev/null 2>&1") && system("unzip -o podfile.lock.zip  > /dev/null 2>&1")
           Pod::UI.puts "下载并解压podfile.lcok文件成功".green
           `rm -rf podfile.lock.zip`
           # 设置获取到的podfile.lock对象
-          PodUpdateConfig.set_lockfile( Pod::Config.instance.installation_root + 'Podfile.lock')
+          PodUpdateConfig.set_lockfile(Pod::Config.instance.installation_root + 'Podfile.lock')
           #获取analyzer
+          Pod::UI.puts "提前根据checksum命中podfile.lcok进行依赖分析".green
           analyzer = Pod::Installer::Analyzer.new(
             Pod::Config.instance.sandbox,
             Pod::Config.instance.podfile,
@@ -58,23 +60,26 @@ def get_podfile_lock
       end
     end
   rescue => error
-    puts error
-    puts "podfile.lcok相关发生异常"
+    puts "podfile.lcok相关处理发生异常，报错原因：#{error}"
+    PodUpdateConfig.clear
     `rm -rf podfile.lock.zip`
     `rm -rf podfile.lock`
   end
 end
 
+
 # 上传podfile.lock文件到服务端
-def upload_podfile_lock
+def upload_podfile_lock(checksum,upload = false)
   begin
-    checksum = Pod::Config.instance.podfile.checksum
     curl = "https://xiuxiu-dl-meitu-com.obs.cn-north-4.myhuaweicloud.com/ios/binary/MTXX/#{checksum}/podfile.lock.zip"
     # 服务端不存在该podfiel.lock文件才上传，避免频繁上报同一个文件
-    if !system("curl -o /dev/null -s -w %{http_code} #{curl} | grep 200")
+    if  upload || !system("curl -o /dev/null -s -w %{http_code} #{curl} | grep 200 > /dev/null 2>&1")
       Pod::UI.puts "上报podfile.lcok文件到服务端".green
-      puts checksum
-      if system("zip  podfile.lock.zip Podfile.lock") && system("curl -F \"name=MTXX\" -F \"version=#{checksum}\" -F \"file=@#{Pathname.pwd}/podfile.lock.zip\" http://nezha.community.cloud.meitu.com/file/upload.json")
+      puts Pod::Config.instance.podfile.checksum
+      if upload
+        puts "mbox podfile.checksum = #{checksum}"
+      end
+      if system("zip  podfile.lock.zip Podfile.lock > /dev/null 2>&1") && system("curl -F \"name=MTXX\" -F \"version=#{checksum}\" -F \"file=@#{Pathname.pwd}/podfile.lock.zip\" http://nezha.community.cloud.meitu.com/file/upload.json > /dev/null 2>&1")
         Pod::UI.puts "上报podfile.lcok文件到服务端成功".green
         `rm -rf podfile.lock.zip`
       else
@@ -82,13 +87,22 @@ def upload_podfile_lock
         `rm -rf podfile.lock.zip`
       end
     end
-
   rescue => error
-     puts "上传podfile.lcok文件失败".red
+     puts "上传podfile.lcok文件失败，失败原因：#{error}"
     `rm -rf podfile.zip`
   end
 end
-
+def upload_mbox_podfile_lock
+  begin
+    podfile_path = Pod::Config.instance.installation_root + 'mtxx/MTXX' + 'Podfile'
+    podfile = Pod::Podfile.from_file(podfile_path) if podfile_path
+    if podfile
+      upload_podfile_lock(podfile.checksum,true )
+    end
+  rescue => error
+    puts "mbox podfile.lcok文件兼容处理失败,失败原因：#{error}"
+  end
+end
 Pod::HooksManager.register('cocoapods-meitu-bin', :pre_install) do |_context|
   require 'cocoapods-meitu-bin/native'
   require 'cocoapods-meitu-bin/helpers/buildAll/bin_helper'
@@ -99,12 +113,6 @@ Pod::HooksManager.register('cocoapods-meitu-bin', :pre_install) do |_context|
   # installer =  Installer.new(config.sandbox, config.podfile, config.lockfile)
   # puts checksum
   get_podfile_lock
-
-
-
-
-
-
   # pod bin repo update 更新二进制私有源
   Pod::Command::Bin::Repo::Update.new(CLAide::ARGV.new($ARGV)).run
 
@@ -142,8 +150,11 @@ end
 # 注册 pod install 钩子
 Pod::HooksManager.register('cocoapods-meitu-bin', :post_install) do |context|
   # p "hello world!  post_install"
-  upload_podfile_lock
-
+  upload_podfile_lock(Pod::Config.instance.podfile.checksum)
+  #判断是否在 mbox 工作目录执行pod install
+  if system("mbox status > /dev/null 2>&1")
+    upload_mbox_podfile_lock
+  end
 end
 
 Pod::HooksManager.register('cocoapods-meitu-bin', :source_provider) do |context, _|
