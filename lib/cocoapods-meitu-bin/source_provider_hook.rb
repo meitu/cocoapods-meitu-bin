@@ -16,7 +16,6 @@ def get_podfile_lock
     end
     # 判断是否有update参数 时不获取服务端podfile.lock文件
     ARGV.each do |arg|
-      puts "pod 执行 #{arg}"
       if arg == 'update'
         is_load_podfile_lock = false
       end
@@ -26,6 +25,14 @@ def get_podfile_lock
       #获取 PODFILE CHECKSUM 用来判断服务端是否存在该podfile.lock
       checksum = Pod::Config.instance.podfile.checksum
       puts checksum
+      # lock =  Pod::Config.instance.lockfile
+      # list = lock.internal_data['SPEC REPOS']['https://github.com/CocoaPods/Specs.git']
+      # #遍历 list
+      # name_list = []
+      # list.each do |item|
+      #   name_list << item
+      #   # `echo #{item} >> /Users/sunxianglong/Desktop/work/data.txt`
+      # end
       # zip下载地址
       curl = "https://xiuxiu-dl-meitu-com.obs.cn-north-4.myhuaweicloud.com/ios/binary/MTXX/#{checksum}/podfile.lock.zip"
       # 判断zip文件是否存在 存在下载并解压
@@ -44,7 +51,14 @@ def get_podfile_lock
             Pod::Config.instance.podfile,
             PodUpdateConfig.lockfile
           )
+          analyzer.update_repositories
           analyzer.analyze(true)
+
+          # analyzer.instance_variable_get("@result").pod_targets.each  do |pod_target|
+          #   if name_list.include?(pod_target.name)
+          #     # "#{SPEC_NAME}/#{VERSION}/#{SPEC_NAME}.podspec"
+          #   end
+          # end
 
           #获取analyzer中所有git 且branch 指向的pod
           Pod::Config.instance.podfile.dependencies.map do |dependency|
@@ -112,9 +126,10 @@ Pod::HooksManager.register('cocoapods-meitu-bin', :pre_install) do |_context|
   # puts Pod::Config.instance
   # installer =  Installer.new(config.sandbox, config.podfile, config.lockfile)
   # puts checksum
-  get_podfile_lock
   # pod bin repo update 更新二进制私有源
   Pod::Command::Bin::Repo::Update.new(CLAide::ARGV.new($ARGV)).run
+
+  get_podfile_lock
 
   # 有插件/本地库 且是dev环境下，默认进入源码白名单  过滤 archive命令
   if _context.podfile.plugins.keys.include?('cocoapods-meitu-bin') && _context.podfile.configuration_env == 'dev'
