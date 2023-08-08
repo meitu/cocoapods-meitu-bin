@@ -348,8 +348,22 @@ ibtool \
         fwks_dir = "#{result_product_dir}/fwks"
         FileUtils.mkdir(fwks_dir) unless File.exist?(fwks_dir)
         fwks.map do |fwk|
-          `rsync -av #{fwk} #{fwks_dir}`
+          new_fwk = get_XCFrameworkIntermediates_path(fwk)
+          if new_fwk && File.exist?(new_fwk)
+            `rsync -av #{new_fwk} #{fwks_dir}`
+          else
+            `rsync -av #{fwk} #{fwks_dir}`
+          end
         end
+      end
+      def get_XCFrameworkIntermediates_path(path)
+        # 使用正则表达式匹配并提取 AdsFramework
+        match = path.to_s.match(/\/([^\/]+)\.xcframework/)
+        if match
+          framework_path = "#{product_dir}/#{iphoneos}/XCFrameworkIntermediates/#{match[1]}/#{match[1]}.framework"
+          return framework_path
+        end
+        return  nil
       end
 
       # 拷贝 framework

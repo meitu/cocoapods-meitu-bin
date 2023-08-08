@@ -110,18 +110,10 @@ module CBin
 
       # 处理单个subspec
       def handle_single_subspec(subspec, spec)
-        vendored_frameworks = spec['vendored_frameworks']
-        if subspec['vendored_frameworks'] && subspec['vendored_frameworks'].instance_of?(String)
-          #判断字符串是尾端xcframework
-          fwk = subspec['vendored_frameworks']
-          if fwk.end_with?("xcframework")
-            vendored_frameworks = %W[#{@pod_target.framework_name} #{@pod_target.framework_name}/fwks/*.xcframework]
-          end
-        end
         subspec['source_files'] = spec['source_files']
         subspec['public_header_files'] = spec['public_header_files']
         subspec['private_header_files'] = spec['private_header_files']
-        subspec['vendored_frameworks'] = vendored_frameworks
+        subspec['vendored_frameworks'] = spec['vendored_frameworks']
         subspec['vendored_libraries'] = spec['vendored_libraries']
         subspec['resources'] = spec['resources']
         # 删除无用字段
