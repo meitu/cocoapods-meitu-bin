@@ -27,7 +27,7 @@ module CBin
         # 处理vendored_libraries和vendored_frameworks
         spec['vendored_libraries'] = "#{root_dir}/libs/*.a"
         #兼容.xcframework
-        spec['vendored_frameworks'] = %W[#{root_dir} #{root_dir}/fwks/*.framework #{root_dir}/fwks/*.xcframework]
+        spec['vendored_frameworks'] = %W[#{root_dir} #{root_dir}/fwks/*.framework]
         # 处理资源
         resources = %W[#{root_dir}/*.{#{special_resource_exts.join(',')}} #{root_dir}/resources/*]
         spec['resources'] = resources
@@ -66,7 +66,6 @@ module CBin
         repo_name = Pod::Config.instance.sources_manager.binary_source.name
         # repo_name = 'example-private-spec-bin'
         argvs = %W[#{repo_name} #{binary_podsepc_json} --skip-import-validation --use-libraries --allow-warnings --verbose]
-
         begin
           push = Pod::Command::Repo::Push.new(CLAide::ARGV.new(argvs))
           push.validate!
@@ -111,10 +110,18 @@ module CBin
 
       # 处理单个subspec
       def handle_single_subspec(subspec, spec)
+        vendored_frameworks = spec['vendored_frameworks']
+        if subspec['vendored_frameworks'] && subspec['vendored_frameworks'].instance_of?(String)
+          #判断字符串是尾端xcframework
+          fwk = subspec['vendored_frameworks']
+          if fwk.end_with?("xcframework")
+            vendored_frameworks = %W[#{@pod_target.framework_name} #{@pod_target.framework_name}/fwks/*.xcframework]
+          end
+        end
         subspec['source_files'] = spec['source_files']
         subspec['public_header_files'] = spec['public_header_files']
         subspec['private_header_files'] = spec['private_header_files']
-        subspec['vendored_frameworks'] = spec['vendored_frameworks']
+        subspec['vendored_frameworks'] = vendored_frameworks
         subspec['vendored_libraries'] = spec['vendored_libraries']
         subspec['resources'] = spec['resources']
         # 删除无用字段
