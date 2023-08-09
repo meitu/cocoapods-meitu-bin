@@ -35,6 +35,7 @@ module Pod
     # 依赖分析
     alias old_resolve_dependencies resolve_dependencies
     def resolve_dependencies
+      start_time = Time.now
       list =  PodUpdateConfig.pods
       # 判断  PodUpdateConfig.pods 是否为空，且数组大于0
       if list && !list.empty?
@@ -43,8 +44,24 @@ module Pod
       if PodUpdateConfig.lockfile
         self.instance_variable_set("@lockfile",PodUpdateConfig.lockfile)
       end
-      start_time = Time.now
-      analyzer = old_resolve_dependencies
+
+      plugin_sources = run_source_provider_hooks
+      analyzer = create_analyzer(plugin_sources)
+
+      UI.section 'Updating local specs repositories' do
+        analyzer.update_repositories
+      end if repo_update? && PodUpdateConfig.repo_update
+
+      UI.section 'Analyzing dependencies' do
+        analyze(analyzer)
+        validate_build_configurations
+      end
+
+      UI.section 'Verifying no changes' do
+        verify_no_podfile_changes!
+        verify_no_lockfile_changes!
+      end if deployment?
+      cost_time_hash['prepare'] = PodUpdateConfig.prepare_time
       cost_time_hash['resolve_dependencies'] = Time.now - start_time
       analyzer
     end

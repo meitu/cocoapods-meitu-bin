@@ -151,6 +151,8 @@ end
 class PodUpdateConfig
   @@pods = []
   @@lockfile = nil
+  @@repo_update = true
+  @@prepare_time = 0
   def self.add_value(value)
     @@pods << value
   end
@@ -161,6 +163,19 @@ class PodUpdateConfig
     @@lockfile
   end
   # 一个类方法，用于显示数组中的值
+  def self.repo_update
+    @@repo_update
+  end
+  def self.set_repo_update
+    @@repo_update = false
+  end
+  def self.set_prepare_time(time)
+    @@prepare_time = time
+  end
+  def self.prepare_time
+    @@prepare_time
+  end
+
   def self.pods
     @@pods
   end
