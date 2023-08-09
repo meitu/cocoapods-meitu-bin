@@ -33,7 +33,7 @@ def get_podfile_lock
         is_load_podfile_lock = true
       end
       branch_value = ENV['branch']
-      if !is_load_podfile_lock && branch_value && branch_value == 'feature/sxl_fix_binary'
+      if !is_load_podfile_lock && branch_value && branch_value == 'develop'
         curl = "https://xiuxiu-dl-meitu-com.obs.cn-north-4.myhuaweicloud.com/ios/binary/MTXX/develop/podfile.lock.zip"
         if system("curl -o /dev/null -s -w %{http_code} #{curl} | grep 200  > /dev/null 2>&1")
           is_load_podfile_lock = true
@@ -118,7 +118,7 @@ end
 def upload_develop_podfile_lock
   begin
     branch_value = ENV['branch']
-    if branch_value && branch_value == 'feature/sxl_fix_binary'
+    if branch_value && branch_value == 'develop'
       if system("zip  podfile.lock.zip Podfile.lock > /dev/null 2>&1") && system("curl -F \"name=MTXX\" -F \"version=develop\" -F \"file=@#{Pathname.pwd}/podfile.lock.zip\" http://nezha.community.cloud.meitu.com/file/upload.json > /dev/null 2>&1")
         Pod::UI.puts "上报podfile.lcok文件到服务端成功".green
         `rm -rf podfile.lock.zip`
