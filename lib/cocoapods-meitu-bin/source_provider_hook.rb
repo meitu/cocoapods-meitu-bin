@@ -2,6 +2,7 @@ require 'cocoapods-meitu-bin/native/sources_manager'
 require 'cocoapods-meitu-bin/command/bin/repo/update'
 require 'cocoapods-meitu-bin/config/config'
 require 'cocoapods/user_interface'
+require 'digest'
 require 'yaml'
 require 'cocoapods'
 
@@ -24,24 +25,33 @@ def get_podfile_lock
     if is_load_podfile_lock
       #获取 PODFILE CHECKSUM 用来判断服务端是否存在该podfile.lock
       checksum = Pod::Config.instance.podfile.checksum
+      Pod::UI.puts "当前podfile文件的checksum:#{checksum}".green
       # zip下载地址
       curl = "https://xiuxiu-dl-meitu-com.obs.cn-north-4.myhuaweicloud.com/ios/binary/MTXX/#{checksum}/podfile.lock.zip"
-
       # 判断服务端是否存在该podfile.lock
       is_load_podfile_lock = false
       if system("curl -o /dev/null -s -w %{http_code} #{curl} | grep 200  > /dev/null 2>&1")
+        Pod::UI.puts "匹配到精准podfile.lock文件，使用当前podfile文件的checksum:#{checksum}获取对应的podfile.lock文件".green
         is_load_podfile_lock = true
       end
-      branch_value = ENV['branch']
-      if !is_load_podfile_lock && branch_value && branch_value == 'develop'
-        curl = "https://xiuxiu-dl-meitu-com.obs.cn-north-4.myhuaweicloud.com/ios/binary/MTXX/develop/podfile.lock.zip"
+
+      if !is_load_podfile_lock
+        branch_value = get_branch_name
+        curl = "https://xiuxiu-dl-meitu-com.obs.cn-north-4.myhuaweicloud.com/ios/binary/MTXX/#{branch_value}/podfile.lock.zip"
         if system("curl -o /dev/null -s -w %{http_code} #{curl} | grep 200  > /dev/null 2>&1")
+          Pod::UI.puts "无法匹配到精准podfile.lock文件，使用当前分支：#{branch_value} 对应的podfile.lock文件".green
+          is_load_podfile_lock = true
+        end
+        #兜底使用develop的podfile.lock
+        if !is_load_podfile_lock
+          Pod::UI.puts "服务端不存在该podfile.lock文件，使用develop分支的podfile.lock文件兜底".green
+          curl = "https://xiuxiu-dl-meitu-com.obs.cn-north-4.myhuaweicloud.com/ios/binary/MTXX/develop/podfile.lock.zip"
           is_load_podfile_lock = true
         end
       end
       # 判断是否需要下载podfile.lock文件
       if is_load_podfile_lock
-        puts "获取服务端存储的podfile.lcok文件".green
+        Pod::UI.puts "获取服务端存储的podfile.lcok文件".green
         #下载并解压的podfile.zip文件
         if system("curl -O #{curl} > /dev/null 2>&1") && system("unzip -o podfile.lock.zip  > /dev/null 2>&1")
           Pod::UI.puts "下载并解压podfile.lcok文件成功".green
@@ -86,10 +96,9 @@ def upload_podfile_lock(checksum,upload = false)
     curl = "https://xiuxiu-dl-meitu-com.obs.cn-north-4.myhuaweicloud.com/ios/binary/MTXX/#{checksum}/podfile.lock.zip"
     # 服务端不存在该podfiel.lock文件才上传，避免频繁上报同一个文件
     if  upload || !system("curl -o /dev/null -s -w %{http_code} #{curl} | grep 200 > /dev/null 2>&1")
-      Pod::UI.puts "上报podfile.lcok文件到服务端".green
-      puts Pod::Config.instance.podfile.checksum
+      Pod::UI.puts "根据checksum:#{checksum}上报podfile.lcok文件到服务端".green
       if upload
-        puts "mbox podfile.checksum = #{checksum}"
+        puts "mbox工作目录/mtxx/MTXX/podfile 对应的checksum = #{checksum}"
       end
       if system("zip  podfile.lock.zip Podfile.lock > /dev/null 2>&1") && system("curl -F \"name=MTXX\" -F \"version=#{checksum}\" -F \"file=@#{Pathname.pwd}/podfile.lock.zip\" http://nezha.community.cloud.meitu.com/file/upload.json > /dev/null 2>&1")
         Pod::UI.puts "上报podfile.lcok文件到服务端成功".green
@@ -107,29 +116,56 @@ end
 def upload_mbox_podfile_lock
   begin
     podfile_path = Pod::Config.instance.installation_root + 'mtxx/MTXX' + 'Podfile'
-    podfile = Pod::Podfile.from_file(podfile_path) if podfile_path
-    if podfile
-      upload_podfile_lock(podfile.checksum,true )
+    checksum = get_checksum(podfile_path)
+    if checksum && checksum.is_a?(String) && checksum.length > 0
+      upload_podfile_lock(checksum,true )
     end
   rescue => error
     puts "mbox podfile.lcok文件兼容处理失败,失败原因：#{error}"
   end
 end
-def upload_develop_podfile_lock
+def upload_branch_podfile_lock
   begin
-    branch_value = ENV['branch']
-    if branch_value && branch_value == 'develop'
-      if system("zip  podfile.lock.zip Podfile.lock > /dev/null 2>&1") && system("curl -F \"name=MTXX\" -F \"version=develop\" -F \"file=@#{Pathname.pwd}/podfile.lock.zip\" http://nezha.community.cloud.meitu.com/file/upload.json > /dev/null 2>&1")
-        Pod::UI.puts "上报podfile.lcok文件到服务端成功".green
+    branch_value = get_branch_name
+    if branch_value && branch_value.is_a?(String) && branch_value.length > 0
+      if system("zip  podfile.lock.zip Podfile.lock > /dev/null 2>&1") && system("curl -F \"name=MTXX\" -F \"version=#{branch_value}\" -F \"file=@#{Pathname.pwd}/podfile.lock.zip\" http://nezha.community.cloud.meitu.com/file/upload.json > /dev/null 2>&1")
+        Pod::UI.puts "根据开发分支名：#{branch_value}上报podfile.lcok文件到服务端成功".green
         `rm -rf podfile.lock.zip`
       else
-        Pod::UI.puts "上报podfile.lcok文件到服务端失败".red
+        Pod::UI.puts "根据开发分支名：#{branch_value}上报podfile.lcok文件到服务端失败".red
         `rm -rf podfile.lock.zip`
       end
     end
   rescue => error
 
   end
+end
+def get_branch_name
+  branch_value = ENV['branch']
+  if !branch_value
+    mtxx_path = Pod::Config.instance.installation_root + 'mtxx/MTXX'
+    #判读podfile文件是否存在
+    if  File.exist?(mtxx_path)
+      Dir.chdir(mtxx_path) do
+        branch_value = `git symbolic-ref --short -q HEAD`
+        if branch_value == 'develop'
+          branch_value = ""
+        end
+      end
+    else
+      branch_value = `git symbolic-ref --short -q HEAD`
+    end
+  end
+  branch_value = branch_value.gsub("\n", "")
+  branch_value
+end
+
+def get_checksum(file_path)
+  return nil unless File.exist?(file_path)
+  content = File.read(file_path)
+  checksum = Digest::SHA1.hexdigest(content)
+  checksum = checksum.encode('UTF-8') if checksum.respond_to?(:encode)
+  return checksum
 end
 
 Pod::HooksManager.register('cocoapods-meitu-bin', :pre_install) do |_context|
@@ -181,13 +217,19 @@ end
 # 注册 pod install 钩子
 Pod::HooksManager.register('cocoapods-meitu-bin', :post_install) do |context|
   #基于podfile的checksum上报云端podfile.lock文件
-  upload_podfile_lock(Pod::Config.instance.podfile.checksum)
+  podfile_path = Pod::Config.instance.installation_root + 'podfile'
+  # puts "#{podfile_path}".green
+  checksum = get_checksum(podfile_path)
+  # puts "#{checksum}".green
+  if checksum
+    upload_podfile_lock(checksum)
+  end
   #判断是否在 mbox 工作目录执行pod install
   if system("mbox status > /dev/null 2>&1")
     upload_mbox_podfile_lock
   end
-  #基于 develop 分支，上报podfile.lock文件
-  upload_develop_podfile_lock
+  #基于分支，上报podfile.lock文件
+  upload_branch_podfile_lock
 end
 
 Pod::HooksManager.register('cocoapods-meitu-bin', :source_provider) do |context, _|
