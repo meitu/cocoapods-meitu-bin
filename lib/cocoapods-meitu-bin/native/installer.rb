@@ -134,7 +134,7 @@ module Pod
           bin_pods << target
         end
       end
-      UI.puts "\n总共有 #{@pod_targets.size} 个Pod库，二进制有 #{bin_pods.size} 个，源码有 #{source_pods.size} 个".green
+      UI.puts "\npod_time_profiler: 总共有 #{@pod_targets.size} 个Pod库，二进制有 #{bin_pods.size} 个，源码有 #{source_pods.size} 个".green
       # 打印二进制库
       if ENV['statistics_bin'] == '1'
         UI.puts "二进制库：".green
@@ -143,7 +143,7 @@ module Pod
       # 打印源码库
       if ENV['statistics_source'] == '1'
         UI.puts "源码库：".green
-        UI.puts source_pods
+        UI.puts "pod_time_profiler:#{source_pods}"
       end
     end
 
