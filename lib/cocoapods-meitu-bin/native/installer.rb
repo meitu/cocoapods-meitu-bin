@@ -173,11 +173,11 @@ module Pod
           request.body = json_data
           response = http.request(request)
           if ENV['MEITU_USE_POD_SOURCE'] == '1'
-            puts "Response code: #{response.code}"
-            puts "data_json: #{data_json}"
+            puts "pod_time_profiler:Response code: #{response.code}"
+            puts "pod_time_profiler:data_json: #{data_json}"
           end
         rescue => error
-          puts "上报pod 耗时统计失败，失败原因：#{error}"
+          puts "pod_time_profiler:上报pod 耗时统计失败，失败原因：#{error}"
         end
       end
 
