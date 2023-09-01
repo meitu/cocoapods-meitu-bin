@@ -185,7 +185,7 @@ module Pod
         UI.puts bin_pods
       end
       # 打印源码库
-      if ENV['statistics_source'] == '1'
+      if ENV['MEITU_USE_POD_SOURCE'] == '1'
         UI.puts "源码库：".green
         source_pods.each do |pod|
           UI.puts "pod_time_profiler:#{pod.name}"
