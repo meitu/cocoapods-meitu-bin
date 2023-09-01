@@ -151,8 +151,13 @@ module Pod
           data["source_count"] = source_pods.size
           data["binary_count"] = bin_pods.size
           data["targets_count"] = @pod_targets.size
-          source = `git config user.email`
-          source = source.gsub("\n", "")
+          source = "unknown user"
+          if ENV['NODE_NAME']
+            source = ENV['NODE_NAME']
+          else
+            source = `git config user.email`
+            source = source.gsub("\n", "")
+          end
           data_json = {
             "subject" => "MTXX pod time profiler",
             "type" => "pod_time_profiler",
@@ -167,7 +172,10 @@ module Pod
           request = Net::HTTP::Post.new(uri.path, headers)
           request.body = json_data
           response = http.request(request)
-          puts "Response code: #{response.code}"
+          if ENV['MEITU_USE_POD_SOURCE'] == '1'
+            puts "Response code: #{response.code}"
+            puts "data_json: #{data_json}"
+          end
         rescue => error
           puts "上报pod 耗时统计失败，失败原因：#{error}"
         end
