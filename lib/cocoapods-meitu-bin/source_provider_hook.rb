@@ -5,26 +5,39 @@ require 'cocoapods/user_interface'
 require 'digest'
 require 'yaml'
 require 'cocoapods'
-
+require 'json'
+require 'net/http'
 #获取服务端podfile.lock文件
 def get_podfile_lock
   begin
     # 默认是获取要获取服务端podfile.lock文件
     is_load_podfile_lock = true
+    #目前只支持MTXX target "MTXX" 项目 #想要支持其他项目可以添加对应 target "xxx"
+    content = File.read(Pod::Config.instance.podfile_path)
+    if content
+      if content.include?("target \"MTXX\"")
+        is_load_podfile_lock = true
+        PodUpdateConfig.set_is_mtxx(true)
+      else
+        is_load_podfile_lock = false
+        PodUpdateConfig.set_is_mtxx(false)
+      end
+    end
     # MEITU_LOAD_CACHE_PODFILE_LOCK 为false时不获取服务端podfile.lock文件
     if ENV['MEITU_LOAD_CACHE_PODFILE_LOCK'] && ENV['MEITU_LOAD_CACHE_PODFILE_LOCK'] == 'false'
       is_load_podfile_lock = false
     end
     # 判断是否有update参数 时不获取服务端podfile.lock文件
     ARGV.each do |arg|
-      if arg == 'update'
+      if arg == 'update' || arg == '--no-cloud'
         is_load_podfile_lock = false
       end
     end
     # podfile.lock文件下载和使用逻辑
     if is_load_podfile_lock
       #获取 PODFILE CHECKSUM 用来判断服务端是否存在该podfile.lock
-      checksum = Pod::Config.instance.podfile.checksum
+      checksum = get_checksum(Pod::Config.instance.podfile_path)
+      PodUpdateConfig.set_checksum(checksum)
       Pod::UI.puts "当前podfile文件的checksum:#{checksum}".green
       # zip下载地址
       curl = "https://xiuxiu-dl-meitu-com.obs.cn-north-4.myhuaweicloud.com/ios/binary/MTXX/#{checksum}/podfile.lock.zip"
@@ -159,10 +172,25 @@ def get_branch_name
   branch_value = branch_value.gsub("\n", "")
   branch_value
 end
-
+#过滤出来podfile中实际有效每行内容，拼接成字符串在SHA1 后UTF-8编码下 用来当做依赖缓存文件的key
 def get_checksum(file_path)
   return nil unless File.exist?(file_path)
-  content = File.read(file_path)
+  content = ""
+  lines = []
+  #过滤出实际使用pod
+  File.open(file_path, 'r') do |file|
+    file.each_line do |line|
+      new_line = line.strip
+      if new_line.start_with?("pod")
+        lines << new_line
+      end
+    end
+  end
+  #给获取的pod list 排序，排除因组件顺序调整导致获取SHA1值不一样
+  lines = lines.sort
+  lines.each do |line|
+    content << line
+  end
   checksum = Digest::SHA1.hexdigest(content)
   checksum = checksum.encode('UTF-8') if checksum.respond_to?(:encode)
   return checksum
@@ -217,19 +245,13 @@ end
 # 注册 pod install 钩子
 Pod::HooksManager.register('cocoapods-meitu-bin', :post_install) do |context|
   #基于podfile的checksum上报云端podfile.lock文件
-  podfile_path = Pod::Config.instance.installation_root + 'podfile'
-  # puts "#{podfile_path}".green
-  checksum = get_checksum(podfile_path)
-  # puts "#{checksum}".green
-  if checksum
-    upload_podfile_lock(checksum)
+  if PodUpdateConfig.is_mtxx
+    if PodUpdateConfig.checksum
+      upload_podfile_lock(PodUpdateConfig.checksum)
+    end
+    upload_branch_podfile_lock
   end
-  #判断是否在 mbox 工作目录执行pod install
-  if system("mbox status > /dev/null 2>&1")
-    upload_mbox_podfile_lock
-  end
-  #基于分支，上报podfile.lock文件
-  upload_branch_podfile_lock
+
 end
 
 Pod::HooksManager.register('cocoapods-meitu-bin', :source_provider) do |context, _|

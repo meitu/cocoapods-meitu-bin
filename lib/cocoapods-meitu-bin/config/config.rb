@@ -153,8 +153,18 @@ class PodUpdateConfig
   @@lockfile = nil
   @@repo_update = true
   @@prepare_time = 0
+  @@checksum = nil
+  @@large_pod_hash = {}
+  @@is_mtxx = false
+
   def self.add_value(value)
     @@pods << value
+  end
+  def self.set_is_mtxx(value)
+    @@is_mtxx = value
+  end
+  def self.is_mtxx()
+    @@is_mtxx
   end
   def self.set_lockfile(path)
     @@lockfile = Pod::Lockfile.from_file(path) if path
@@ -162,6 +172,19 @@ class PodUpdateConfig
   def self.lockfile()
     @@lockfile
   end
+  def self.set_checksum(checksum)
+    @@checksum = checksum
+  end
+  def self.checksum
+    @@checksum
+  end
+  def self.add_pod_hash(name,size)
+    @@large_pod_hash[name]=size
+  end
+  def self.large_pod_hash
+    @@large_pod_hash
+  end
+
   # 一个类方法，用于显示数组中的值
   def self.repo_update
     @@repo_update

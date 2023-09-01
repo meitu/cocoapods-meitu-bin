@@ -1,3 +1,4 @@
+require 'cocoapods-meitu-bin/config/config'
 module CBin
   class PodSize
     include Pod
@@ -15,6 +16,9 @@ module CBin
         return
       end
       @@lock.synchronize do
+        size = pod[:size].to_i
+        size = ('%.0f' % (size / 1024)).to_f
+        PodUpdateConfig.add_pod_hash(pod[:name],size)
         File.open(@@tmp_file_path, "a") do |f|
           f.write(format_pod_size(pod))
         end
