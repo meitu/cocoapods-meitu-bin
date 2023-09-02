@@ -166,7 +166,7 @@ module Pod
             "data" => data
           }
           begin
-            timeout(3) do
+            Timeout.timeout(3) do
               json_data = [data_json].to_json
               api_url = "http://event-adapter-internal.prism.cloud.meitu-int.com/api/v1/http/send/batch"
               headers = { "Content-Type" => "application/json" }
