@@ -3,6 +3,7 @@ require 'parallel'
 require 'cocoapods'
 require 'xcodeproj'
 require 'json'
+require 'timeout'
 require 'net/http'
 require 'cocoapods-meitu-bin/native/pod_source_installer'
 require 'cocoapods-meitu-bin/helpers/pod_size_helper'
@@ -164,20 +165,26 @@ module Pod
             "source" => source,
             "data" => data
           }
-          json_data = [data_json].to_json
-          api_url = "http://event-adapter-internal.prism.cloud.meitu-int.com/api/v1/http/send/batch"
-          headers = { "Content-Type" => "application/json" }
-          uri = URI(api_url)
-          http = Net::HTTP.new(uri.host, uri.port)
-          request = Net::HTTP::Post.new(uri.path, headers)
-          request.body = json_data
-          response = http.request(request)
-          if ENV['MEITU_USE_POD_SOURCE'] == '1'
-            puts "pod_time_profiler:Response code: #{response.code}"
-            puts "pod_time_profiler:data_json: #{data_json}"
+          begin
+            timeout(3) do
+              json_data = [data_json].to_json
+              api_url = "http://event-adapter-internal.prism.cloud.meitu-int.com/api/v1/http/send/batch"
+              headers = { "Content-Type" => "application/json" }
+              uri = URI(api_url)
+              http = Net::HTTP.new(uri.host, uri.port)
+              request = Net::HTTP::Post.new(uri.path, headers)
+              request.body = json_data
+              response = http.request(request)
+              if ENV['MEITU_USE_POD_SOURCE'] == '1'
+                puts "pod_time_profiler: Response code: #{response.code}"
+                puts "pod_time_profiler: data_json: #{data_json}"
+              end
+            end
+          rescue Timeout::Error
+            puts "pod_time_profiler: 上报pod操作操作已超时"
           end
         rescue => error
-          puts "pod_time_profiler:上报pod 耗时统计失败，失败原因：#{error}"
+          puts "pod_time_profiler: 上报pod 耗时统计失败，失败原因：#{error}"
         end
       end
 
@@ -196,7 +203,7 @@ module Pod
       if ENV['MEITU_USE_POD_SOURCE'] == '1'
         UI.puts "源码库：".green
         source_pods.each do |pod|
-          UI.puts "pod_time_profiler:#{pod.name}"
+          UI.puts "pod_time_profiler: #{pod.name}"
         end
       end
     end
