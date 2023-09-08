@@ -12,6 +12,9 @@ def get_podfile_lock
   begin
     # 默认是获取要获取服务端podfile.lock文件
     is_load_podfile_lock = true
+    #获取 PODFILE CHECKSUM 用来判断服务端是否存在该podfile.lock
+    checksum = get_checksum(Pod::Config.instance.podfile_path)
+    PodUpdateConfig.set_checksum(checksum)
     #目前只支持MTXX target "MTXX" 项目 #想要支持其他项目可以添加对应 target "xxx"
     content = File.read(Pod::Config.instance.podfile_path)
     if content
@@ -35,9 +38,6 @@ def get_podfile_lock
     end
     # podfile.lock文件下载和使用逻辑
     if is_load_podfile_lock
-      #获取 PODFILE CHECKSUM 用来判断服务端是否存在该podfile.lock
-      checksum = get_checksum(Pod::Config.instance.podfile_path)
-      PodUpdateConfig.set_checksum(checksum)
       Pod::UI.puts "当前podfile文件的checksum:#{checksum}".green
       # zip下载地址
       curl = "https://xiuxiu-dl-meitu-com.obs.cn-north-4.myhuaweicloud.com/ios/binary/MTXX/#{checksum}/podfile.lock.zip"

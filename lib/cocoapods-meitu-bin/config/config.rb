@@ -156,6 +156,7 @@ class PodUpdateConfig
   @@checksum = nil
   @@large_pod_hash = {}
   @@is_mtxx = false
+  @@is_clear = false
 
   def self.add_value(value)
     @@pods << value
@@ -205,5 +206,9 @@ class PodUpdateConfig
   def self.clear
     @@pods = []
     @@lockfile = nil
+    @@is_clear = true
+  end
+  def self.is_clear
+    @@is_clear
   end
 end

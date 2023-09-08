@@ -47,6 +47,9 @@ module Pod
       if PodUpdateConfig.lockfile
         self.instance_variable_set("@lockfile",PodUpdateConfig.lockfile)
       end
+      if PodUpdateConfig.is_clear
+        self.instance_variable_set("@lockfile",PodUpdateConfig.lockfile)
+      end
 
       plugin_sources = run_source_provider_hooks
       analyzer = create_analyzer(plugin_sources)
