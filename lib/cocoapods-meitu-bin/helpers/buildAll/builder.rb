@@ -1,3 +1,4 @@
+require 'cocoapods-meitu-bin/config/config'
 
 module CBin
   module BuildAll
@@ -11,6 +12,9 @@ module CBin
         @configuration = configuration
         @file_accessors = pod_target.file_accessors unless pod_target.nil?
         @base_dir = "#{Pathname.pwd}/build_pods"
+        if PodUpdateConfig.shell_project
+          @base_dir = "#{Pathname.pwd}/all_build/Build"
+        end
       end
 
       # 构建
@@ -92,7 +96,7 @@ module CBin
 
       # xxx.framework 所在目录
       def product_dir
-        @product_dir = "#{@base_dir}/#{@pod_target}/Products"
+        @product_dir = "#{@base_dir}/Products"
         @product_dir
       end
 

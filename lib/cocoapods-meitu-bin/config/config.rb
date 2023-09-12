@@ -157,7 +157,15 @@ class PodUpdateConfig
   @@large_pod_hash = {}
   @@is_mtxx = false
   @@is_clear = false
+  @@shell_project = false
 
+
+  def self.set_shell_project
+    @@shell_project = true
+  end
+  def self.shell_project
+    @@shell_project
+  end
   def self.add_value(value)
     @@pods << value
   end

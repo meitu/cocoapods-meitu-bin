@@ -1,4 +1,4 @@
-
+require 'cocoapods-meitu-bin/config/config'
 module CBin
   module BuildAll
     class PodspecUtil
@@ -48,11 +48,10 @@ module CBin
       # podspec写入文件
       def write_binary_podspec(spec)
         UI.info "写入podspec：`#{@pod_target}`".yellow
-        podspec_dir = "#{Pathname.pwd}/build_pods/#{@pod_target}/Products/podspec"
+        podspec_dir = PodUpdateConfig.shell_project ? "#{Pathname.pwd}/all_build/Build/Products/podspec" : "#{Pathname.pwd}/build_pods/#{@pod_target}/Products/podspec"
         FileUtils.mkdir(podspec_dir) unless File.exist?(podspec_dir)
         file = "#{podspec_dir}/#{@pod_target.pod_name}.podspec.json"
         FileUtils.rm_rf(file) if File.exist?(file)
-
         File.open(file, "w+") do |f|
           f.write(spec.to_pretty_json)
         end
