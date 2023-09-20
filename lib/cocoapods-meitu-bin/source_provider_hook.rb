@@ -15,7 +15,7 @@ def get_podfile_lock
     #获取 PODFILE CHECKSUM 用来判断服务端是否存在该podfile.lock
     checksum = get_checksum(Pod::Config.instance.podfile_path)
     PodUpdateConfig.set_checksum(checksum)
-    #目前只支持MTXX target "MTXX" 项目 #想要支持其他项目可以添加对应 target "xxx"
+    #目前只支持MTXX target "MTXX" 项目 想要支持其他项目可以添加对应 target "xxx"
     content = File.read(Pod::Config.instance.podfile_path)
     if content
       if content.include?("target \"MTXX\"")
@@ -38,13 +38,13 @@ def get_podfile_lock
     end
     # podfile.lock文件下载和使用逻辑
     if is_load_podfile_lock
-      Pod::UI.puts "当前podfile文件的checksum:#{checksum}".green
+      Pod::UI.puts "pod_time_profiler: 当前podfile文件的checksum:#{checksum}".green
       # zip下载地址
       curl = "https://xiuxiu-dl-meitu-com.obs.cn-north-4.myhuaweicloud.com/ios/binary/MTXX/#{checksum}/podfile.lock.zip"
       # 判断服务端是否存在该podfile.lock
       is_load_podfile_lock = false
       if system("curl -o /dev/null -s -w %{http_code} #{curl} | grep 200  > /dev/null 2>&1")
-        Pod::UI.puts "匹配到精准podfile.lock文件，使用当前podfile文件的checksum:#{checksum}获取对应的podfile.lock文件".green
+        Pod::UI.puts "pod_time_profiler: 匹配到精准podfile.lock文件，使用当前podfile文件的checksum:#{checksum}获取对应的podfile.lock文件".green
         is_load_podfile_lock = true
       end
 
@@ -52,27 +52,27 @@ def get_podfile_lock
         branch_value = get_branch_name
         curl = "https://xiuxiu-dl-meitu-com.obs.cn-north-4.myhuaweicloud.com/ios/binary/MTXX/#{branch_value}/podfile.lock.zip"
         if system("curl -o /dev/null -s -w %{http_code} #{curl} | grep 200  > /dev/null 2>&1")
-          Pod::UI.puts "无法匹配到精准podfile.lock文件，使用当前分支：#{branch_value} 对应的podfile.lock文件".green
+          Pod::UI.puts "pod_time_profiler: 无法匹配到精准podfile.lock文件，使用当前分支：#{branch_value} 对应的podfile.lock文件".green
           is_load_podfile_lock = true
         end
         #兜底使用develop的podfile.lock
         if !is_load_podfile_lock
-          Pod::UI.puts "服务端不存在该podfile.lock文件，使用develop分支的podfile.lock文件兜底".green
+          Pod::UI.puts "pod_time_profiler: 服务端不存在该podfile.lock文件，使用develop分支的podfile.lock文件兜底".green
           curl = "https://xiuxiu-dl-meitu-com.obs.cn-north-4.myhuaweicloud.com/ios/binary/MTXX/develop/podfile.lock.zip"
           is_load_podfile_lock = true
         end
       end
       # 判断是否需要下载podfile.lock文件
       if is_load_podfile_lock
-        Pod::UI.puts "获取服务端存储的podfile.lcok文件".green
+        Pod::UI.puts "pod_time_profiler: 获取服务端存储的podfile.lcok文件".green
         #下载并解压的podfile.zip文件
         if system("curl -O #{curl} > /dev/null 2>&1") && system("unzip -o podfile.lock.zip  > /dev/null 2>&1")
-          Pod::UI.puts "下载并解压podfile.lcok文件成功".green
+          Pod::UI.puts "pod_time_profiler: 下载并解压podfile.lcok文件成功".green
           `rm -rf podfile.lock.zip`
           # 设置获取到的podfile.lock对象
           PodUpdateConfig.set_lockfile(Pod::Config.instance.installation_root + 'Podfile.lock')
           #获取analyzer
-          Pod::UI.puts "提前根据checksum命中podfile.lcok进行依赖分析".green
+          Pod::UI.puts "pod_time_profiler: 提前根据checksum命中podfile.lcok进行依赖分析".green
           analyzer = Pod::Installer::Analyzer.new(
             Pod::Config.instance.sandbox,
             Pod::Config.instance.podfile,
@@ -89,13 +89,13 @@ def get_podfile_lock
             end
           end
         else
-          puts "获取podfile.lcok文件失败"
+          puts "pod_time_profiler:  获取podfile.lcok文件失败"
           `rm -rf podfile.lock.zip`
         end
       end
     end
   rescue => error
-    puts "podfile.lcok相关处理发生异常，报错原因：#{error}"
+    puts "pod_time_profiler: podfile.lcok相关处理发生异常，报错原因：#{error}"
     PodUpdateConfig.clear
     `rm -rf podfile.lock.zip`
     `rm -rf podfile.lock`
@@ -109,20 +109,20 @@ def upload_podfile_lock(checksum,upload = false)
     curl = "https://xiuxiu-dl-meitu-com.obs.cn-north-4.myhuaweicloud.com/ios/binary/MTXX/#{checksum}/podfile.lock.zip"
     # 服务端不存在该podfiel.lock文件才上传，避免频繁上报同一个文件
     if  upload || !system("curl -o /dev/null -s -w %{http_code} #{curl} | grep 200 > /dev/null 2>&1")
-      Pod::UI.puts "根据checksum:#{checksum}上报podfile.lcok文件到服务端".green
+      Pod::UI.puts "pod_time_profiler:  根据checksum:#{checksum}上报podfile.lcok文件到服务端".green
       if upload
-        puts "mbox工作目录/mtxx/MTXX/podfile 对应的checksum = #{checksum}"
+        puts "pod_time_profiler:  mbox工作目录/mtxx/MTXX/podfile 对应的checksum = #{checksum}"
       end
       if system("zip  podfile.lock.zip Podfile.lock > /dev/null 2>&1") && system("curl -F \"name=MTXX\" -F \"version=#{checksum}\" -F \"file=@#{Pathname.pwd}/podfile.lock.zip\" http://nezha.community.cloud.meitu.com/file/upload.json > /dev/null 2>&1")
-        Pod::UI.puts "上报podfile.lcok文件到服务端成功".green
+        Pod::UI.puts "pod_time_profiler:  上报podfile.lcok文件到服务端成功".green
         `rm -rf podfile.lock.zip`
       else
-        Pod::UI.puts "上报podfile.lcok文件到服务端失败".red
+        Pod::UI.puts "pod_time_profiler: 上报podfile.lcok文件到服务端失败".red
         `rm -rf podfile.lock.zip`
       end
     end
   rescue => error
-     puts "上传podfile.lcok文件失败，失败原因：#{error}"
+     puts "pod_time_profiler: 上传podfile.lcok文件失败，失败原因：#{error}"
     `rm -rf podfile.zip`
   end
 end
@@ -134,7 +134,7 @@ def upload_mbox_podfile_lock
       upload_podfile_lock(checksum,true )
     end
   rescue => error
-    puts "mbox podfile.lcok文件兼容处理失败,失败原因：#{error}"
+    puts "pod_time_profiler: mbox podfile.lcok文件兼容处理失败,失败原因：#{error}"
   end
 end
 def upload_branch_podfile_lock
@@ -142,10 +142,10 @@ def upload_branch_podfile_lock
     branch_value = get_branch_name
     if branch_value && branch_value.is_a?(String) && branch_value.length > 0
       if system("zip  podfile.lock.zip Podfile.lock > /dev/null 2>&1") && system("curl -F \"name=MTXX\" -F \"version=#{branch_value}\" -F \"file=@#{Pathname.pwd}/podfile.lock.zip\" http://nezha.community.cloud.meitu.com/file/upload.json > /dev/null 2>&1")
-        Pod::UI.puts "根据开发分支名：#{branch_value}上报podfile.lcok文件到服务端成功".green
+        Pod::UI.puts "pod_time_profiler: 根据开发分支名：#{branch_value}上报podfile.lcok文件到服务端成功".green
         `rm -rf podfile.lock.zip`
       else
-        Pod::UI.puts "根据开发分支名：#{branch_value}上报podfile.lcok文件到服务端失败".red
+        Pod::UI.puts "pod_time_profiler: 根据开发分支名：#{branch_value}上报podfile.lcok文件到服务端失败".red
         `rm -rf podfile.lock.zip`
       end
     end

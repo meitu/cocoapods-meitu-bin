@@ -132,7 +132,7 @@ module Pod
 
         start_time = Time.now
         @activated = Molinillo::Resolver.new(self, self).resolve(dependencies, locked_dependencies)
-        UI.puts "Molinillo resolve耗时:#{'%.1f' % (Time.now - start_time)}s".green
+        UI.puts "pod_time_profiler: Molinillo resolve耗时:#{'%.1f' % (Time.now - start_time)}s".green
         resolver_specs_by_target
       rescue Molinillo::ResolverError => e
         handle_resolver_error(e)
