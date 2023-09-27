@@ -2,7 +2,7 @@ require 'yaml'
 require 'cocoapods-meitu-bin/native/podfile'
 require 'cocoapods-meitu-bin/native/podfile_env'
 require 'cocoapods/generate'
-
+require 'cocoapods'
 module CBin
   class Config
     def config_file
@@ -145,5 +145,78 @@ module CBin
 
   def self.config
     @config ||= Config.new
+  end
+end
+
+class PodUpdateConfig
+  @@pods = []
+  @@lockfile = nil
+  @@repo_update = true
+  @@prepare_time = 0
+  @@checksum = nil
+  @@large_pod_hash = {}
+  @@is_mtxx = false
+  @@is_clear = false
+  @@shell_project = false
+
+
+  def self.set_shell_project
+    @@shell_project = true
+  end
+  def self.shell_project
+    @@shell_project
+  end
+  def self.add_value(value)
+    @@pods << value
+  end
+  def self.set_is_mtxx(value)
+    @@is_mtxx = value
+  end
+  def self.is_mtxx()
+    @@is_mtxx
+  end
+  def self.set_lockfile(path)
+    @@lockfile = Pod::Lockfile.from_file(path) if path
+  end
+  def self.lockfile()
+    @@lockfile
+  end
+  def self.set_checksum(checksum)
+    @@checksum = checksum
+  end
+  def self.checksum
+    @@checksum
+  end
+  def self.add_pod_hash(name,size)
+    @@large_pod_hash[name]=size
+  end
+  def self.large_pod_hash
+    @@large_pod_hash
+  end
+
+  # 一个类方法，用于显示数组中的值
+  def self.repo_update
+    @@repo_update
+  end
+  def self.set_repo_update
+    @@repo_update = false
+  end
+  def self.set_prepare_time(time)
+    @@prepare_time = time
+  end
+  def self.prepare_time
+    @@prepare_time
+  end
+
+  def self.pods
+    @@pods
+  end
+  def self.clear
+    @@pods = []
+    @@lockfile = nil
+    @@is_clear = true
+  end
+  def self.is_clear
+    @@is_clear
   end
 end

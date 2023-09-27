@@ -2,8 +2,12 @@ require 'cocoapods/installer/project_cache/target_metadata.rb'
 require 'parallel'
 require 'cocoapods'
 require 'xcodeproj'
+require 'json'
+require 'timeout'
+require 'net/http'
 require 'cocoapods-meitu-bin/native/pod_source_installer'
 require 'cocoapods-meitu-bin/helpers/pod_size_helper'
+require 'cocoapods-meitu-bin/config/config'
 
 module Pod
   class Installer
@@ -35,7 +39,35 @@ module Pod
     alias old_resolve_dependencies resolve_dependencies
     def resolve_dependencies
       start_time = Time.now
-      analyzer = old_resolve_dependencies
+      list =  PodUpdateConfig.pods
+      # 判断  PodUpdateConfig.pods 是否为空，且数组大于0
+      if list && !list.empty?
+        self.update = { :pods => list  }
+      end
+      if PodUpdateConfig.lockfile
+        self.instance_variable_set("@lockfile",PodUpdateConfig.lockfile)
+      end
+      if PodUpdateConfig.is_clear
+        self.instance_variable_set("@lockfile",PodUpdateConfig.lockfile)
+      end
+
+      plugin_sources = run_source_provider_hooks
+      analyzer = create_analyzer(plugin_sources)
+
+      UI.section 'Updating local specs repositories' do
+        analyzer.update_repositories
+      end if repo_update? && PodUpdateConfig.repo_update
+
+      UI.section 'Analyzing dependencies' do
+        analyze(analyzer)
+        validate_build_configurations
+      end
+
+      UI.section 'Verifying no changes' do
+        verify_no_podfile_changes!
+        verify_no_lockfile_changes!
+      end if deployment?
+      cost_time_hash['prepare'] = PodUpdateConfig.prepare_time
       cost_time_hash['resolve_dependencies'] = Time.now - start_time
       analyzer
     end
@@ -88,17 +120,6 @@ module Pod
     def perform_post_install_actions
       start_time = Time.now
       old_perform_post_install_actions
-      cost_time_hash['perform_post_install_actions'] = Time.now - start_time
-      # 打印有多少个源码库，多少二进制库
-      print_source_bin_statistics
-      # 打印耗时
-      print_cost_time
-      # 打印大小大于阈值的库
-      CBin::PodSize.print_pods
-    end
-
-    # 打印有多少个源码库，多少二进制库
-    def print_source_bin_statistics
       source_pods = []
       bin_pods = []
       @pod_targets.map do |target|
@@ -108,16 +129,85 @@ module Pod
           bin_pods << target
         end
       end
-      UI.puts "\n总共有 #{@pod_targets.size} 个Pod库，二进制有 #{bin_pods.size} 个，源码有 #{source_pods.size} 个".green
+      cost_time_hash['perform_post_install_actions'] = Time.now - start_time
+
+      # 打印有多少个源码库，多少二进制库
+      print_source_bin_statistics(source_pods,bin_pods)
+      # 打印耗时
+      print_cost_time
+      # 打印大小大于阈值的库
+      CBin::PodSize.print_pods
+      if PodUpdateConfig.is_mtxx
+        begin
+          data = {
+            "meitu_bin_version" => CBin::VERSION,
+            "large_pod_hash" => PodUpdateConfig.large_pod_hash
+          }
+          all_time = 0
+          cost_time_hash.each do |key, value|
+            time = ('%.1f' % value).to_f
+            data[key] = time
+            all_time = all_time + time
+          end
+          data["pod_time"] = all_time
+          binary_rate = bin_pods.size.to_f / @pod_targets.size.to_f
+          data["binary_rate"] = ('%.2f' % binary_rate).to_f
+          data["source_count"] = source_pods.size
+          data["binary_count"] = bin_pods.size
+          data["targets_count"] = @pod_targets.size
+          source = "unknown user"
+          if ENV['NODE_NAME']
+            source = ENV['NODE_NAME']
+          else
+            source = `git config user.email`
+            source = source.gsub("\n", "")
+          end
+          data_json = {
+            "subject" => "MTXX pod time profiler",
+            "type" => "pod_time_profiler",
+            "source" => source,
+            "data" => data
+          }
+          begin
+            Timeout.timeout(3) do
+              json_data = [data_json].to_json
+              api_url = "http://event-adapter-internal.prism.cloud.meitu-int.com/api/v1/http/send/batch"
+              headers = { "Content-Type" => "application/json" }
+              uri = URI(api_url)
+              http = Net::HTTP.new(uri.host, uri.port)
+              request = Net::HTTP::Post.new(uri.path, headers)
+              request.body = json_data
+              response = http.request(request)
+              if ENV['MEITU_USE_POD_SOURCE'] == '1'
+                puts "pod_time_profiler: Response code: #{response.code}"
+                puts "pod_time_profiler: data_json: #{data_json}"
+              end
+            end
+          rescue Timeout::Error
+            puts "pod_time_profiler: 上报pod操作操作已超时"
+          end
+        rescue => error
+          puts "pod_time_profiler: 上报pod 耗时统计失败，失败原因：#{error}"
+        end
+      end
+
+    end
+
+    # 打印有多少个源码库，多少二进制库
+    def print_source_bin_statistics(source_pods,bin_pods)
+
+      UI.puts "\npod_time_profiler: 总共有 #{@pod_targets.size} 个Pod库，二进制有 #{bin_pods.size} 个，源码有 #{source_pods.size} 个".green
       # 打印二进制库
       if ENV['statistics_bin'] == '1'
         UI.puts "二进制库：".green
         UI.puts bin_pods
       end
       # 打印源码库
-      if ENV['statistics_source'] == '1'
+      if ENV['MEITU_USE_POD_SOURCE'] == '1'
         UI.puts "源码库：".green
-        UI.puts source_pods
+        source_pods.each do |pod|
+          UI.puts "pod_time_profiler: #{pod.name}"
+        end
       end
     end
 

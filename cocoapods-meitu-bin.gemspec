@@ -20,7 +20,7 @@ Gem::Specification.new do |spec|
   spec.require_paths = ['lib']
 
   spec.add_dependency 'parallel', '~> 1.22.0'
-  spec.add_dependency 'cocoapods', ['>= 1.10.2', '<= 1.11.2']
+  spec.add_dependency 'cocoapods'
   # spec.add_dependency 'cocoapods', '1.10.2'
   spec.add_dependency "cocoapods-generate",'~> 2.0.1'
 

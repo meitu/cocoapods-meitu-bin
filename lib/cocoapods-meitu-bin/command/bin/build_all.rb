@@ -5,6 +5,7 @@ require 'cocoapods-meitu-bin/helpers/buildAll/bin_helper'
 require 'cocoapods-meitu-bin/config/config'
 require 'yaml'
 require 'digest'
+# require 'concurrent'
 
 module Pod
   class Command
@@ -28,6 +29,7 @@ module Pod
         def self.options
           [
             %w[--clean 全部二进制包制作完成后删除编译临时目录],
+            %w[--shell-project 是否依赖壳工程编译产物一次编译生成所有组件的编译产物],
             %w[--clean-single 每制作完一个二进制包就删除该编译临时目录],
             %w[--repo-update 更新Podfile中指定的repo仓库],
             %w[--full-build 是否全量打包],
@@ -40,6 +42,7 @@ module Pod
           @pods = argv.shift_argument
           @clean = argv.flag?('clean', false)
           @clean_single = argv.flag?('clean-single', false)
+          @shell_project = argv.flag?('shell-project', false)
           @repo_update = argv.flag?('repo-update', false)
           @full_build = argv.flag?('full-build', false)
           @skip_simulator = argv.flag?('skip-simulator', false)
@@ -70,7 +73,11 @@ module Pod
           # 删除编译产物
           clean_build_pods
           # 编译所有pod_targets
-          results = build_pod_targets
+          #根据@shell_project 判断是执行 build_shell_project_pod_targets 还是 build_pod_targets
+          if @shell_project
+            PodUpdateConfig.set_shell_project
+          end
+          results = @shell_project ? build_shell_project_pod_targets : build_pod_targets
           # 执行post_build命令
           post_build(results)
           # 删除编译产物
@@ -288,6 +295,129 @@ module Pod
               'Black List' => @black_list || [],
               'Write List' => @write_list || []
             }
+            show_results(results)
+            results
+          end
+        end
+        # 基于壳工程编译产物进行个组件的zip压缩 上传和对应二进制podspec生成上传
+        def build_shell_project_pod_targets
+          UI.title "Build all pod targets(#{@full_build ? '全量打包' : '非全量打包'})".green do
+            pod_targets = @analyze_result.pod_targets.uniq
+            success_pods = []
+            fail_pods = []
+            local_pods = []
+            external_pods = []
+            binary_pods = []
+            created_pods = []
+            # # 指定线程池的大小（例如，这里创建一个拥有 16 个线程的池）
+            # pool = Concurrent::ThreadPoolExecutor.new(max_threads: 16)
+            # # 创建一个互斥锁
+            # mutex = Mutex.new
+            pod_targets.map do |pod_target|
+              begin
+                version = @version_helper.version(pod_target.pod_name, pod_target.root_spec.version.to_s, @analyze_result.specifications, @configuration, podfile.include_dependencies?)
+                # 黑名单（不分全量和非全量）
+                next if skip_build?(pod_target)
+                # 白名单（有白名单，只看白名单，不分全量和非全量）
+                next if !@write_list.nil? && !@write_list.empty? && !@write_list.include?(pod_target.pod_name)
+                # 本地库
+                if @sandbox.local?(pod_target.pod_name)
+                  local_pods << pod_target.pod_name
+                  show_skip_tip("#{pod_target.pod_name} 是本地库")
+                  next
+                end
+                # 外部源（如 git）
+                if @sandbox.checkout_sources[pod_target.pod_name]
+                  external_pods << pod_target.pod_name
+                  show_skip_tip("#{pod_target.pod_name} 以external方式引入")
+                  next
+                end
+                # 无源码
+                if !@sandbox.local?(pod_target.pod_name) && !pod_target.should_build?
+                  binary_pods << pod_target.pod_name
+                  show_skip_tip("#{pod_target.pod_name} 无需编译")
+                  next
+                end
+                # 非全量编译、不在白名单中且已经有相应的二进制版本
+                if has_created_binary?(pod_target.pod_name, version)
+                  created_pods << pod_target.pod_name
+                  show_skip_tip("#{pod_target.pod_name}(#{version}) 已经有二进制版本了")
+                  next
+                end
+                # # 提交一个任务给线程池
+                # pool.post do
+                #   # 在这里执行你的任务逻辑
+                #   # 构建产物
+                #   builder = Builder.new(pod_target, @sandbox.checkout_sources, @skip_simulator, @configuration)
+                #   # result = builder.build
+                #   # fail_pods << pod_target.pod_name unless result
+                #   # next unless result
+                #   builder.create_binary
+                #   # 压缩并上传zip
+                #   zip_helper = ZipFileHelper.new(pod_target, version, builder.product_dir, builder.build_as_framework?, @configuration)
+                #   result = zip_helper.zip_lib
+                #   mutex.synchronize do
+                #     # 在互斥锁的保护下，安全地修改共享资源
+                #     fail_pods << pod_target.pod_name unless result
+                #   end
+                #   next unless result
+                #   # result = zip_helper.upload_zip_lib
+                #   # fail_pods << pod_target.pod_name unless result
+                #   # next unless result
+                #   # 生成二进制podspec并上传
+                #   podspec_creator = PodspecUtil.new(pod_target, version, builder.build_as_framework?, @configuration)
+                #   bin_spec = podspec_creator.create_binary_podspec
+                #   bin_spec_file = podspec_creator.write_binary_podspec(bin_spec)
+                #   # result = podspec_creator.push_binary_podspec(bin_spec_file)
+                #   # fail_pods << pod_target.pod_name unless result
+                #   mutex.synchronize do
+                #     # 在互斥锁的保护下，安全地修改共享资源
+                #     success_pods << pod_target.pod_name if result
+                #   end
+                # end
+                # 在这里执行你的任务逻辑
+                # 构建产物
+                builder = Builder.new(pod_target, @sandbox.checkout_sources, @skip_simulator, @configuration)
+                # result = builder.build
+                # fail_pods << pod_target.pod_name unless result
+                # next unless result
+                builder.create_binary
+                # 压缩并上传zip
+                zip_helper = ZipFileHelper.new(pod_target, version, builder.product_dir, builder.build_as_framework?, @configuration)
+                result = zip_helper.zip_lib
+                fail_pods << pod_target.pod_name unless result
+                next unless result
+                result = zip_helper.upload_zip_lib
+                fail_pods << pod_target.pod_name unless result
+                next unless result
+                # 生成二进制podspec并上传
+                podspec_creator = PodspecUtil.new(pod_target, version, builder.build_as_framework?, @configuration)
+                bin_spec = podspec_creator.create_binary_podspec
+                bin_spec_file = podspec_creator.write_binary_podspec(bin_spec)
+                result = podspec_creator.push_binary_podspec(bin_spec_file)
+                fail_pods << pod_target.pod_name unless result
+                success_pods << pod_target.pod_name if result
+              rescue Pod::StandardError => e
+                UI.info "`#{pod_target}`失败，原因：#{e}".red
+                fail_pods << pod_target.pod_name
+                next
+              end
+            end
+            # 关闭线程池，等待所有任务完成
+            # pool.shutdown
+            # pool.wait_for_termination
+            results = {
+              'Total' => pod_targets,
+              'Success' => success_pods,
+              'Fail' => fail_pods,
+              'Local' => local_pods,
+              'External' => external_pods,
+              'No Source File' => binary_pods,
+              'Created Binary' => created_pods,
+              'Black List' => @black_list || [],
+              'Write List' => @write_list || []
+            }
+
             show_results(results)
             results
           end

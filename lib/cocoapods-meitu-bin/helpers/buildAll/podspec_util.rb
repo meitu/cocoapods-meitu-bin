@@ -1,4 +1,4 @@
-
+require 'cocoapods-meitu-bin/config/config'
 module CBin
   module BuildAll
     class PodspecUtil
@@ -26,6 +26,7 @@ module CBin
         spec['private_header_files'] = "#{root_dir}/PrivateHeaders/*.h"
         # 处理vendored_libraries和vendored_frameworks
         spec['vendored_libraries'] = "#{root_dir}/libs/*.a"
+        #兼容.xcframework
         spec['vendored_frameworks'] = %W[#{root_dir} #{root_dir}/fwks/*.framework]
         # 处理资源
         resources = %W[#{root_dir}/*.{#{special_resource_exts.join(',')}} #{root_dir}/resources/*]
@@ -47,11 +48,10 @@ module CBin
       # podspec写入文件
       def write_binary_podspec(spec)
         UI.info "写入podspec：`#{@pod_target}`".yellow
-        podspec_dir = "#{Pathname.pwd}/build_pods/#{@pod_target}/Products/podspec"
+        podspec_dir = PodUpdateConfig.shell_project ? "#{Pathname.pwd}/all_build/Build/Products/podspec" : "#{Pathname.pwd}/build_pods/#{@pod_target}/Products/podspec"
         FileUtils.mkdir(podspec_dir) unless File.exist?(podspec_dir)
         file = "#{podspec_dir}/#{@pod_target.pod_name}.podspec.json"
         FileUtils.rm_rf(file) if File.exist?(file)
-
         File.open(file, "w+") do |f|
           f.write(spec.to_pretty_json)
         end
@@ -65,7 +65,6 @@ module CBin
         repo_name = Pod::Config.instance.sources_manager.binary_source.name
         # repo_name = 'example-private-spec-bin'
         argvs = %W[#{repo_name} #{binary_podsepc_json} --skip-import-validation --use-libraries --allow-warnings --verbose]
-
         begin
           push = Pod::Command::Repo::Push.new(CLAide::ARGV.new(argvs))
           push.validate!
