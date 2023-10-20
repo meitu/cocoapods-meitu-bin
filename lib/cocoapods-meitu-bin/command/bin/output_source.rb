@@ -17,12 +17,14 @@ module Pod
 
         def self.options
           [
-            %w[--error-source 过滤异常的source，比如http的，CI打包只支持SSH认证]
+            %w[--error-source 过滤异常的source，比如http的，CI打包只支持SSH认证],
+            %w[--export-file 导出当前所有tag版本的podspec]
           ].concat(super).uniq
         end
 
         def initialize(argv)
           @error_source = argv.flag?('error-source', false)
+          @export_file = argv.flag?('export-file', false)
           super
         end
 
@@ -33,8 +35,26 @@ module Pod
           repo_update
           # 分析依赖
           @analyze_result = analyse
-          # 打印source
-          show_cost_source
+
+          if  @error_source
+            # 打印source
+            show_cost_source
+          end
+
+          if  @export_file
+            pod_targets = @analyze_result.pod_targets.uniq
+            pod_targets.map { |pod_target|
+              current_path = Dir.pwd
+              spec_path = "#{current_path}/podfile_shell/#{pod_target.root_spec.name}/#{pod_target.root_spec.version.version}/"
+              `mkdir -p  #{spec_path}`
+              if system("cp #{pod_target.root_spec.defined_in_file.to_s}  #{spec_path} > /dev/null 2>&1")
+                puts "#{pod_target.root_spec.name} 的 #{pod_target.root_spec.version.version} 已经导出"
+              else
+                `rm -rf #{current_path}/podfile_shell/#{pod_target.root_spec.name} > /dev/null 2>&1`
+              end
+              # puts pod_target.root_spec.name pod_target.root_spec.version.version pod_target.root_spec.defined_in_file
+            }
+          end
           # 计算耗时
           show_cost_time
         end
