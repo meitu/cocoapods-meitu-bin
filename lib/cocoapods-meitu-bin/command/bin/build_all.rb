@@ -153,35 +153,17 @@ module Pod
 
         # 获取 podfile
         def podfile
-          @podfile ||= begin
-                         podfile_path = File.join(Pathname.pwd, 'Podfile')
-                         raise Informative, 'Podfile不存在' unless File.exist?(podfile_path)
-                         sources_manager = Pod::Config.instance.sources_manager
-                         podfile = Podfile.from_file(Pathname.new(podfile_path))
-                         podfile_hash = podfile.to_hash
-                         podfile_hash['sources'] = (podfile_hash['sources'] || []).concat(sources_manager.code_source_list.map(&:url))
-                         podfile_hash['sources'] << sources_manager.binary_source.url
-                         podfile_hash['sources'].uniq!
-                         Podfile.from_hash(podfile_hash)
-                       end
+          @podfile ||=  Pod::Config.instance.podfile
         end
 
         # 获取 podfile.lock
         def lockfile
-          @lockfile ||= begin
-                          lock_path = File.join(Pathname.pwd, 'Podfile.lock')
-                          raise Informative, 'Podfile.lock不存在，请执行pod install' unless File.exist?(lock_path)
-                          Lockfile.from_file(Pathname.new(lock_path))
-                        end
+          @lockfile ||= Pod::Config.instance.lockfile
         end
 
         # 获取 sandbox
         def sandbox
-          @sandbox ||= begin
-                         sandbox_path = File.join(Pathname.pwd, 'Pods')
-                         raise Informative, 'Pods文件夹不存在，请执行pod install' unless File.exist?(sandbox_path)
-                         Pod::Sandbox.new(sandbox_path)
-                       end
+          @sandbox ||=  Pod::Config.instance.sandbox
         end
 
         # 根据podfile和podfile.lock分析依赖

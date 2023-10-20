@@ -201,14 +201,17 @@ Pod::HooksManager.register('cocoapods-meitu-bin', :pre_install) do |_context|
   require 'cocoapods-meitu-bin/native'
   require 'cocoapods-meitu-bin/helpers/buildAll/bin_helper'
   Pod::UI.puts "当前configuration: `#{ENV['configuration'] || Pod::Config.instance.podfile.configuration}`".green
-  # checksum = Pod::Config.instance.podfile.checksum
-  # puts Pod::Config.instance
-  # installer =  Installer.new(config.sandbox, config.podfile, config.lockfile)
-  # puts checksum
   # pod bin repo update 更新二进制私有源
   Pod::Command::Bin::Repo::Update.new(CLAide::ARGV.new($ARGV)).run
-
-  get_podfile_lock
+  content = File.read(Pod::Config.instance.podfile_path)
+  if content
+    if content.include?("target \"MTXX\"")
+      PodUpdateConfig.set_is_mtxx(true)
+    else
+      PodUpdateConfig.set_is_mtxx(false)
+    end
+  end
+  # get_podfile_lock
 
   # 有插件/本地库 且是dev环境下，默认进入源码白名单  过滤 archive命令
   if _context.podfile.plugins.keys.include?('cocoapods-meitu-bin') && _context.podfile.configuration_env == 'dev'
@@ -242,17 +245,17 @@ Pod::HooksManager.register('cocoapods-meitu-bin', :pre_install) do |_context|
   PodUpdateConfig.set_prepare_time(Time.now - start_time)
 end
 
-# 注册 pod install 钩子
-Pod::HooksManager.register('cocoapods-meitu-bin', :post_install) do |context|
-  #基于podfile的checksum上报云端podfile.lock文件
-  if PodUpdateConfig.is_mtxx
-    if PodUpdateConfig.checksum
-      upload_podfile_lock(PodUpdateConfig.checksum)
-    end
-    upload_branch_podfile_lock
-  end
-
-end
+# # 注册 pod install 钩子
+# Pod::HooksManager.register('cocoapods-meitu-bin', :post_install) do |context|
+#   #基于podfile的checksum上报云端podfile.lock文件
+#   if PodUpdateConfig.is_mtxx
+#     if PodUpdateConfig.checksum
+#       upload_podfile_lock(PodUpdateConfig.checksum)
+#     end
+#     upload_branch_podfile_lock
+#   end
+#
+# end
 
 Pod::HooksManager.register('cocoapods-meitu-bin', :source_provider) do |context, _|
   sources_manager = Pod::Config.instance.sources_manager
