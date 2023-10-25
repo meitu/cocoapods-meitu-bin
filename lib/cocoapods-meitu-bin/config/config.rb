@@ -12,6 +12,9 @@ module CBin
     def template_hash
       {
           'configuration_env' => { description: '编译环境', default: 'dev', selection: %w[dev debug_iphoneos release_iphoneos] },
+          'minimum_deployment_target' => { description: '最低部署目标，参与二进制版本生成', default: 'iOS12.0'},
+          'bundle_identifier' => { description: '捆绑标识符，参与二进制版本生成', default: 'com.xxx.www' },
+          'random_value' => { description: '随机值，参与二进制版本生成', default: 'a1b2c3d4f5' },
           'binary_repo_url' => { description: '二进制podspec私有源地址', default: 'git@github.com:Zhangyanshen/example-private-spec-bin.git' },
           'binary_upload_url' => { description: '二进制文件上传地址', default: 'http://localhost:8080/frameworks' },
           'binary_download_url' => { description: '二进制文件下载地址，后面会依次传入Xcode版本、configuration、组件名称与组件版本', default: 'http://localhost:8080/frameworks' },
@@ -55,6 +58,8 @@ module CBin
     def binary_download_url_str
       CBin.config.binary_download_url
     end
+
+
 
     def set_configuration_env(env)
       @configuration_env = env

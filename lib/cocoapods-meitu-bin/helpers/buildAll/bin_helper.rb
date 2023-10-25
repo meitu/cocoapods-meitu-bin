@@ -1,5 +1,5 @@
 require 'digest'
-
+require 'cocoapods-meitu-bin/config/config'
 module CBin
   module BuildAll
     class BinHelper
@@ -21,6 +21,9 @@ module CBin
           if include_dependencies
             specs << dependencies_str(pod_name, specifications)
           end
+          specs <<  minimum_deployment_target_str
+          specs <<  bundle_identifier_str
+          specs <<  random_value_str
           specs << xcode_version
           specs << (configuration.nil? ? 'Debug' : configuration)
           specs_str = specs.join('')
@@ -33,6 +36,20 @@ module CBin
           specs_str_md5 = @specs_str_md5_hash[pod_name]
         end
         "#{original_version}.bin#{specs_str_md5}"
+      end
+
+      #最低部署目标，参与二进制版本生成
+      def minimum_deployment_target_str
+        CBin.config.minimum_deployment_target
+      end
+
+      # 捆绑标识符，参与二进制版本生成
+      def bundle_identifier_str
+        CBin.config.bundle_identifier
+      end
+      # 随机值，参与二进制版本生成
+      def random_value_str
+        CBin.config.random_value
       end
 
       def xcode_version
